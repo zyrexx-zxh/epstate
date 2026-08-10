@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useScroll, useTransform } from "motion/react";
+import { motion, useScroll, useTransform, useMotionValue, useSpring } from "motion/react";
 
 type Service = {
   index: string;
@@ -60,10 +60,12 @@ function useReducedMotion() {
 }
 
 function ServiceCard({ service }: { service: Service }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
+  const [hovered, setHovered] = useState(false);
+
   const { scrollYProgress } = useScroll({
-    target: ref,
+    target: cardRef,
     offset: ["start end", "end start"],
   });
   const rawY = useTransform(
@@ -73,26 +75,69 @@ function ServiceCard({ service }: { service: Service }) {
   );
   const y = reducedMotion ? 0 : rawY;
 
+  const rotX = useMotionValue(0);
+  const rotY = useMotionValue(0);
+  const springRotX = useSpring(rotX, { stiffness: 260, damping: 20 });
+  const springRotY = useSpring(rotY, { stiffness: 260, damping: 20 });
+
   return (
-    <motion.div ref={ref} style={{ y }} className={service.offset}>
-      <div
+    <motion.div ref={cardRef} style={{ y }} className={service.offset}>
+      <motion.div
         data-cursor-hover
-        className="group relative overflow-hidden rounded-2xl border border-line bg-glass p-8 backdrop-blur-sm transition-transform duration-500 ease-out hover:-translate-y-2 sm:p-10"
+        className="group relative overflow-hidden rounded-2xl border border-line bg-glass backdrop-blur-sm"
+        style={{
+          rotateX: springRotX,
+          rotateY: springRotY,
+          transformPerspective: 900,
+          transformStyle: "preserve-3d",
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseMove={(e) => {
+          if (reducedMotion) return;
+          const rect = e.currentTarget.getBoundingClientRect();
+          const relX = (e.clientX - rect.left) / rect.width - 0.5;
+          const relY = (e.clientY - rect.top) / rect.height - 0.5;
+          rotX.set(relY * -14);
+          rotY.set(relX * 14);
+          e.currentTarget.style.setProperty("--gx", `${(relX + 0.5) * 100}%`);
+          e.currentTarget.style.setProperty("--gy", `${(relY + 0.5) * 100}%`);
+        }}
+        onMouseLeave={() => {
+          setHovered(false);
+          rotX.set(0);
+          rotY.set(0);
+        }}
       >
-        <div className="flex items-start justify-between gap-4 font-mono text-xs tracking-widest text-ash">
-          <span>{service.index}</span>
-          <span className="text-right opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-            {service.tags.join(" · ")}
-          </span>
+        {/* Moving glare that follows cursor */}
+        <div
+          className="pointer-events-none absolute inset-0 z-10 rounded-2xl"
+          style={{
+            opacity: hovered ? 1 : 0,
+            transition: "opacity 0.35s ease",
+            background:
+              "radial-gradient(circle at var(--gx,50%) var(--gy,50%), rgba(255,255,255,0.1), transparent 55%)",
+          }}
+        />
+
+        {/* Card content */}
+        <div className="p-8 sm:p-10">
+          <div className="flex items-start justify-between gap-4 font-mono text-xs tracking-widest text-ash">
+            <span>{service.index}</span>
+            <span className="text-right opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+              {service.tags.join(" · ")}
+            </span>
+          </div>
+          <h3 className="mt-16 font-display text-2xl font-semibold leading-tight text-bone sm:text-3xl">
+            {service.title}
+          </h3>
+          <p className="mt-4 max-w-sm text-sm text-ash sm:text-base">
+            {service.description}
+          </p>
         </div>
-        <h3 className="mt-16 font-display text-2xl font-semibold leading-tight text-bone sm:text-3xl">
-          {service.title}
-        </h3>
-        <p className="mt-4 max-w-sm text-sm text-ash sm:text-base">
-          {service.description}
-        </p>
-        <div className="pointer-events-none absolute inset-0 -z-10 scale-100 bg-gradient-to-br from-white/[0.06] to-transparent opacity-0 transition-all duration-500 group-hover:scale-105 group-hover:opacity-100" />
-      </div>
+
+        {/* Ambient inner glow */}
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-white/[0.05] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+      </motion.div>
     </motion.div>
   );
 }
