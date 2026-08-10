@@ -1,14 +1,7 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
-import {
-  motion,
-  useScroll,
-  useTransform,
-  useMotionValue,
-  useSpring,
-  useMotionValueEvent,
-} from "motion/react";
+import { useRef, useState } from "react";
+import { motion, useMotionValue, useSpring } from "motion/react";
 
 type Service = {
   index: string;
@@ -71,11 +64,11 @@ function Card({ service }: { service: Service }) {
   return (
     <motion.div
       data-cursor-hover
-      className="relative flex-shrink-0 rounded-2xl overflow-hidden"
+      className="relative flex-shrink-0 rounded-2xl overflow-hidden select-none"
       style={{
-        width: "clamp(320px, 70vw, 860px)",
-        height: "78vh",
-        marginRight: "2vw",
+        width: "clamp(300px, 68vw, 820px)",
+        height: "72vh",
+        scrollSnapAlign: "start",
         rotateX: springRotX,
         rotateY: springRotY,
         transformPerspective: 1100,
@@ -104,7 +97,7 @@ function Card({ service }: { service: Service }) {
         rotY.set(0);
       }}
     >
-      {/* Per-card colour bloom */}
+      {/* Colour bloom */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -112,15 +105,15 @@ function Card({ service }: { service: Service }) {
         }}
       />
 
-      {/* Top rim light */}
+      {/* Top rim */}
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
 
-      {/* Ghost index number */}
+      {/* Ghost number */}
       <span
         aria-hidden
         className="absolute pointer-events-none select-none font-display font-bold text-white"
         style={{
-          fontSize: "clamp(130px, 30vw, 360px)",
+          fontSize: "clamp(120px, 28vw, 340px)",
           bottom: "-0.12em",
           right: "-0.04em",
           opacity: 0.035,
@@ -145,7 +138,6 @@ function Card({ service }: { service: Service }) {
 
       {/* Content */}
       <div className="absolute inset-0 flex flex-col justify-between p-10 md:p-12">
-        {/* Top row */}
         <div className="flex items-start justify-between gap-4">
           <div>
             <span className="font-mono text-[9px] uppercase tracking-[0.38em] text-ash block">
@@ -167,7 +159,6 @@ function Card({ service }: { service: Service }) {
           </div>
         </div>
 
-        {/* Bottom */}
         <div>
           <div
             className="h-px w-10 mb-7"
@@ -176,7 +167,7 @@ function Card({ service }: { service: Service }) {
           <h3
             className="font-display font-bold text-bone whitespace-pre-line"
             style={{
-              fontSize: "clamp(2.1rem, 4vw, 4.6rem)",
+              fontSize: "clamp(2rem, 3.8vw, 4.4rem)",
               lineHeight: 0.92,
               letterSpacing: "-0.02em",
             }}
@@ -193,95 +184,109 @@ function Card({ service }: { service: Service }) {
 }
 
 export default function ServicesGrid() {
-  const sectionRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
-  const [scrollDist, setScrollDist] = useState(0);
   const [activeCard, setActiveCard] = useState(0);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const dragMoved = useRef(false);
 
-  useEffect(() => {
-    const calc = () => {
-      if (trackRef.current) {
-        setScrollDist(Math.max(0, trackRef.current.scrollWidth - window.innerWidth));
-      }
-    };
-    const id = setTimeout(calc, 120);
-    window.addEventListener("resize", calc);
-    return () => {
-      clearTimeout(id);
-      window.removeEventListener("resize", calc);
-    };
-  }, []);
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = trackRef.current;
+    if (!el) return;
+    isDragging.current = true;
+    dragMoved.current = false;
+    startX.current = e.clientX + el.scrollLeft;
+    el.setPointerCapture(e.pointerId);
+    el.style.cursor = "grabbing";
+    el.style.scrollSnapType = "none"; // disable snap while dragging for fluidity
+  };
 
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end end"],
-  });
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging.current || !trackRef.current) return;
+    dragMoved.current = true;
+    trackRef.current.scrollLeft = startX.current - e.clientX;
+  };
 
-  const x = useTransform(scrollYProgress, [0, 1], [0, -scrollDist]);
+  const onPointerUp = () => {
+    const el = trackRef.current;
+    if (!el) return;
+    isDragging.current = false;
+    el.style.cursor = "grab";
+    // Re-enable snap — browser will snap to nearest card
+    el.style.scrollSnapType = "x mandatory";
+  };
 
-  useMotionValueEvent(scrollYProgress, "change", (v) => {
-    setActiveCard(Math.min(TOTAL - 1, Math.floor(v * TOTAL)));
-  });
+  const onScroll = () => {
+    const el = trackRef.current;
+    if (!el) return;
+    // Approximate card + gap width to find active index
+    const cardW = el.firstElementChild
+      ? (el.firstElementChild as HTMLElement).offsetWidth + 24
+      : el.clientWidth * 0.7;
+    setActiveCard(Math.min(TOTAL - 1, Math.round(el.scrollLeft / cardW)));
+  };
 
   return (
-    <section
-      ref={sectionRef}
-      id="services"
-      style={{ height: scrollDist ? `calc(100vh + ${scrollDist}px)` : "520vh" }}
-    >
-      <div className="sticky top-0 h-screen overflow-hidden flex flex-col justify-center">
-
-        {/* Header */}
-        <div className="flex items-end justify-between px-8 md:px-14 mb-8 md:mb-10">
-          <div>
-            <span className="font-mono text-[9px] uppercase tracking-[0.38em] text-ash">
-              Disciplines
-            </span>
-            <h2
-              className="font-display font-bold text-bone mt-2 leading-[0.92]"
-              style={{ fontSize: "clamp(1.8rem, 3.5vw, 3.2rem)", letterSpacing: "-0.02em" }}
-            >
-              What We Build
-            </h2>
-          </div>
-
-          {/* Progress indicator */}
-          <div className="flex items-center gap-2.5">
-            {SERVICES.map((_, i) => (
-              <div
-                key={i}
-                className="h-px rounded-full transition-all duration-500 ease-out"
-                style={{
-                  width: i === activeCard ? 32 : 12,
-                  background: i === activeCard ? "#f6f5f1" : "rgba(255,255,255,0.18)",
-                }}
-              />
-            ))}
-            <span className="font-mono text-[9px] uppercase tracking-widest text-ash ml-2">
-              {String(activeCard + 1).padStart(2, "0")} / {String(TOTAL).padStart(2, "0")}
-            </span>
-          </div>
+    <section id="services" className="py-24 md:py-36">
+      {/* Header */}
+      <div className="flex items-end justify-between px-8 md:px-14 mb-10">
+        <div>
+          <span className="font-mono text-[9px] uppercase tracking-[0.38em] text-ash">
+            Disciplines
+          </span>
+          <h2
+            className="font-display font-bold text-bone mt-2 leading-[0.92]"
+            style={{ fontSize: "clamp(1.8rem, 3.5vw, 3.2rem)", letterSpacing: "-0.02em" }}
+          >
+            What We Build
+          </h2>
         </div>
 
-        {/* Horizontal track driven by vertical scroll */}
-        <motion.div
-          ref={trackRef}
-          style={{ x }}
-          className="flex items-center will-change-transform"
-        >
-          <div className="flex-shrink-0 w-[8vw] md:w-[10vw]" />
-          {SERVICES.map((service) => (
-            <Card key={service.index} service={service} />
+        {/* Progress dots */}
+        <div className="flex items-center gap-2.5">
+          {SERVICES.map((_, i) => (
+            <div
+              key={i}
+              className="h-px rounded-full transition-all duration-500 ease-out"
+              style={{
+                width: i === activeCard ? 32 : 12,
+                background: i === activeCard ? "#f6f5f1" : "rgba(255,255,255,0.18)",
+              }}
+            />
           ))}
-          <div className="flex-shrink-0 w-[10vw]" />
-        </motion.div>
-
-        {/* Scroll hint */}
-        <div className="absolute bottom-7 left-1/2 -translate-x-1/2 flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.32em] text-white/25 select-none pointer-events-none">
-          <span className="h-px w-6 bg-white/20" />
-          Scroll to explore
-          <span className="h-px w-6 bg-white/20" />
+          <span className="font-mono text-[9px] uppercase tracking-widest text-ash ml-2">
+            {String(activeCard + 1).padStart(2, "0")} / {String(TOTAL).padStart(2, "0")}
+          </span>
         </div>
+      </div>
+
+      {/* ── The actual horizontal scroll track ── */}
+      <div
+        ref={trackRef}
+        className="no-scrollbar flex items-center gap-6 overflow-x-scroll pb-4"
+        style={{
+          scrollSnapType: "x mandatory",
+          paddingLeft: "8vw",
+          paddingRight: "8vw",
+          cursor: "grab",
+          WebkitOverflowScrolling: "touch",
+        }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onScroll={onScroll}
+      >
+        {SERVICES.map((service) => (
+          <Card key={service.index} service={service} />
+        ))}
+      </div>
+
+      {/* Drag hint */}
+      <div className="mt-8 flex items-center justify-center gap-3 font-mono text-[9px] uppercase tracking-[0.32em] text-white/25 select-none">
+        <span className="h-px w-6 bg-white/20" />
+        Drag to explore
+        <span className="h-px w-6 bg-white/20" />
       </div>
     </section>
   );
