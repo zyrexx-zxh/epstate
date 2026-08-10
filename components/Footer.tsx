@@ -1,32 +1,33 @@
+import Link from "next/link";
 import MagneticLink from "./MagneticLink";
 
 export default function Footer() {
   return (
     <footer className="relative flex flex-col items-center justify-center px-6 py-32 text-center sm:py-48">
       <h2 className="font-display text-[clamp(2.5rem,11vw,8rem)] font-bold uppercase leading-[0.9] text-bone">
-        Initiate
-        <br />
-        Project
+        Initiate<br />Project
       </h2>
 
       <a
-        href="https://t.me/epstate"
-        target="_blank"
-        rel="noopener noreferrer"
+        href="mailto:claxen@outlook.com"
         data-cursor-hover
-        className="group relative mt-12 overflow-hidden rounded-full border border-line bg-glass px-10 py-4 font-mono text-xs uppercase tracking-[0.25em] text-bone backdrop-blur-md transition-colors duration-300 hover:bg-bone hover:text-void"
+        className="group mt-12 overflow-hidden rounded-full border border-line bg-glass px-10 py-4 font-mono text-xs uppercase tracking-[0.25em] text-bone backdrop-blur-md transition-colors duration-300 hover:bg-bone hover:text-void"
       >
         Request a Custom Quote
       </a>
 
-      <div className="mt-24 flex gap-10 sm:gap-16">
-        <MagneticLink href="https://t.me/epstate" external>
-          Telegram
-        </MagneticLink>
-        <MagneticLink href="mailto:hello@epstate.dev">Email</MagneticLink>
+      <div className="mt-20 flex gap-10 sm:gap-16">
+        <MagneticLink href="https://t.me/Claxen" external>Telegram</MagneticLink>
+        <MagneticLink href="mailto:claxen@outlook.com">Email</MagneticLink>
       </div>
 
-      <p className="mt-24 font-mono text-[10px] uppercase tracking-[0.3em] text-ash">
+      <div className="mt-16 flex gap-8 font-mono text-[10px] uppercase tracking-[0.25em] text-ash">
+        <Link href="/about" className="transition-colors hover:text-bone">About</Link>
+        <Link href="/privacy" className="transition-colors hover:text-bone">Privacy</Link>
+        <Link href="/terms" className="transition-colors hover:text-bone">Terms</Link>
+      </div>
+
+      <p className="mt-16 font-mono text-[10px] uppercase tracking-[0.3em] text-ash">
         © {new Date().getFullYear()} Epstate — Bespoke Pricing, Scope Dependent
       </p>
     </footer>
